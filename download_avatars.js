@@ -2,17 +2,48 @@ var request = require('request');
 var fs = require('fs');
 var config = require('dotenv').config();
 
-// Git authentication
-var GITHUB_USER = config.parsed.GITHUB_USER;
-var GITHUB_TOKEN = config.parsed.GITHUB_TOKEN;
-
 // Global values
 var dir = './avatars/';
+
+function terminate(code, err) {
+  switch (code) {
+    case -1:
+      console.log('Error: .env file does not exist.');
+      break;
+    case -2:
+      console.log('Error: .env file is missing information.');
+      break;
+    case -3:
+      console.log('Error: .env file contains incorrect credentials.');
+      break;
+    case -4:
+      console.log('Error: Provided owner/repo does not exist.');
+      break;
+    case -5:
+      console.log('Error: Please specify both repo owner and repo name.');
+      break;
+    default:
+      console.error(err);
+  }
+  console.log("Process Terminated.");
+  process.exit();
+}
 
 //  This function will use the request library
 // to programmatically fetch the list of contributors
 // via HTTPS for the given repo.
 function getRepoContributors(repoOwner, repoName, callback) {
+  // Git authentication
+  if (config.error) {
+    terminate(-1, null);
+  }
+  var GITHUB_USER = config.parsed.GITHUB_USER;
+  var GITHUB_TOKEN = config.parsed.GITHUB_TOKEN;
+  if (!GITHUB_USER || !GITHUB_TOKEN) {
+    terminate(-2, null);
+  }
+
+  // requesting get
   var options = {
     url: 'https://'
       + GITHUB_USER + ':' + GITHUB_TOKEN
@@ -28,6 +59,16 @@ function getRepoContributors(repoOwner, repoName, callback) {
       console.error(err);
       process.exit();
     })
+    .on('response', function(response) {
+      if (response.statusCode === 400
+        || response.statusCode === 401
+        || response.statusCode === 403) {
+        terminate(-3, null);
+      }
+      if (response.statusCode === 404) {
+        terminate(-4, null);
+      }
+    })
     .on('data', function(chunk) {
       // store every chunk in buffer
       buff += chunk;
@@ -40,20 +81,19 @@ function getRepoContributors(repoOwner, repoName, callback) {
     });
 }
 
- // This function download a image and save it in a file
- // inputs:
- //   - url: specifies where the image is store
- //   - filePath: specifies where the
+// This function download a image and save it in a file
+// inputs:
+//   - url: specifies where the image is store
+//   - filePath: specifies where the
 function downloadImageByURL(url, filePath) {
   // if the directory does not exist, create it
   if (!fs.existsSync(dir)) {
+    console.log('Warning:', dir, 'does not exist, new directory created.');
     fs.mkdirSync(dir);
   }
   request.get(url)
     .on('error', function(err) {
-      // error occurs, output error and terminate
-      console.error(err);
-      process.exit();
+      terminate(0, err);
     })
     .pipe(fs.createWriteStream(filePath))
     .on('finish', function() {
@@ -73,9 +113,8 @@ function loop(arr) {
 function start() {
   // if owner or repo is missing
   // output error, process terminates
-  if (!process.argv[2] || !process.argv[3]) {
-    console.error('Please specify both repo owner and repo name');
-    process.exit();
+  if (process.argv.length !== 4) {
+    terminate(-5, null);
   }
   getRepoContributors(process.argv[2], process.argv[3], loop);
 }
