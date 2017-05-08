@@ -1,6 +1,6 @@
 var request = require('request');
 var fs = require('fs');
-var dir = '../avatars/';
+var dir = './avatars/';
 
 // Git authentication
 var GITHUB_USER = 'vivienfan';
@@ -32,6 +32,7 @@ function getRepoContributors(repoOwner, repoName, callback) {
     .on('end', function() {
       // when reading data is done
       // do something with my buffer
+      console.log('Downloading image...');
       callback(JSON.parse(buff));
     });
 }
@@ -51,7 +52,10 @@ function downloadImageByURL(url, filePath) {
       console.error(err);
       process.exit();
     })
-    .pipe(fs.createWriteStream(filePath));
+    .pipe(fs.createWriteStream(filePath))
+    .on('finish', function() {
+      console.log('Image saved at', filePath);
+    });
 }
 
 function loop(arr) {
