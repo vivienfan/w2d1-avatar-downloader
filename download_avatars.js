@@ -1,10 +1,13 @@
 var request = require('request');
 var fs = require('fs');
-var dir = './avatars/';
+var config = require('dotenv').config();
 
 // Git authentication
-var GITHUB_USER = 'vivienfan';
-var GITHUB_TOKEN = 'f5990bbdc7e520d59a07d2bb9de13e37ad1f2a4d';
+var GITHUB_USER = config.parsed.GITHUB_USER;
+var GITHUB_TOKEN = config.parsed.GITHUB_TOKEN;
+
+// Global values
+var dir = './avatars/';
 
 //  This function will use the request library
 // to programmatically fetch the list of contributors
