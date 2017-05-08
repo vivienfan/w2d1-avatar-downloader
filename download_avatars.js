@@ -4,6 +4,20 @@ var config = require('dotenv').config();
 
 // Global values
 var dir = './avatars/';
+var GITHUB_USER;
+var GITHUB_TOKEN;
+
+function init() {
+    // Git authentication
+  if (config.error) {
+    terminate(-1, null);
+  }
+  GITHUB_USER = config.parsed.GITHUB_USER;
+  GITHUB_TOKEN = config.parsed.GITHUB_TOKEN;
+  if (!GITHUB_USER || !GITHUB_TOKEN) {
+    terminate(-2, null);
+  }
+}
 
 function terminate(code, err) {
   switch (code) {
@@ -33,16 +47,6 @@ function terminate(code, err) {
 // to programmatically fetch the list of contributors
 // via HTTPS for the given repo.
 function getRepoContributors(repoOwner, repoName, callback) {
-  // Git authentication
-  if (config.error) {
-    terminate(-1, null);
-  }
-  var GITHUB_USER = config.parsed.GITHUB_USER;
-  var GITHUB_TOKEN = config.parsed.GITHUB_TOKEN;
-  if (!GITHUB_USER || !GITHUB_TOKEN) {
-    terminate(-2, null);
-  }
-
   // requesting get
   var options = {
     url: 'https://'
@@ -76,7 +80,6 @@ function getRepoContributors(repoOwner, repoName, callback) {
     .on('end', function() {
       // when reading data is done
       // do something with my buffer
-      console.log('Downloading image...');
       callback(JSON.parse(buff));
     });
 }
@@ -91,6 +94,13 @@ function downloadImageByURL(url, filePath) {
     console.log('Warning:', dir, 'does not exist, new directory created.');
     fs.mkdirSync(dir);
   }
+
+  // requesting get
+  var options = {
+    url: 'https://' + GITHUB_USER + ':' + GITHUB_TOKEN
+      + '@' + url.substring(8),
+    headers: { 'User-Agent': 'request' }
+  }
   request.get(url)
     .on('error', function(err) {
       terminate(0, err);
@@ -103,6 +113,7 @@ function downloadImageByURL(url, filePath) {
 
 function loop(arr) {
   // loop through every object in the array
+  console.log('Downloading image...');
   arr.forEach(function(obj) {
     // generate file path based on the user name
     var filePath = dir + obj.login + '.jpg'
@@ -116,6 +127,7 @@ function start() {
   if (process.argv.length !== 4) {
     terminate(-5, null);
   }
+  init();
   getRepoContributors(process.argv[2], process.argv[3], loop);
 }
 
